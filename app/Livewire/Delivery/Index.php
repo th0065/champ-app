@@ -1,6 +1,5 @@
 <?php
 
-
 namespace App\Livewire\Delivery;
 
 use App\Models\User;
@@ -11,11 +10,8 @@ use Illuminate\Support\Facades\Hash;
 
 class Index extends Component
 {
-    // Pour la modale Driver
     public $showingDriverModal = false;
     public $name, $email, $phone;
-
-    // Pour l'attribution des commandes
     public $selectedDrivers = []; 
 
     protected $rules = [
@@ -26,42 +22,24 @@ class Index extends Component
 
     // --- GESTION DES DRIVERS ---
 
-    public function openModal()
+    public function toggleDriverAvailability($driverId)
     {
-        $this->reset(['name', 'email', 'phone']);
-        $this->resetErrorBag();
-        $this->showingDriverModal = true;
+        $driver = User::findOrFail($driverId);
+        $driver->is_available = !$driver->is_available;
+        $driver->save();
     }
 
-    public function saveDriver()
-    {
-        $this->validate();
-
-        User::create([
-            'name' => $this->name,
-            'email' => $this->email,
-            'phone' => $this->phone,
-            'password' => Hash::make('password123'),
-            'role' => 'driver',
-        ]);
-
-        $this->showingDriverModal = false;
-    }
-
-    public function deleteDriver($id)
-    {
-        User::where('id', $id)->where('role', 'driver')->delete();
-    }
-
-    // --- LOGIQUE D'ATTRIBUTION (DELIVERY) ---
+    // --- LOGIQUE D'ATTRIBUTION ---
 
     public function assignOrder($orderId)
     {
         $driverId = $this->selectedDrivers[$orderId] ?? null;
 
-        if (!$driverId) return;
+        if (!$driverId) {
+            session()->flash('error', 'Veuillez choisir un livreur.');
+            return;
+        }
 
-        // Créer l'enregistrement dans la table deliveries
         Delivery::create([
             'order_id' => $orderId,
             'driver_id' => $driverId,
@@ -69,29 +47,33 @@ class Index extends Component
             'assigned_at' => now(),
         ]);
 
-        // Mettre à jour le statut de la commande originale
         Order::where('id', $orderId)->update(['status' => 'processing']);
-
-        // Nettoyer la sélection
         unset($this->selectedDrivers[$orderId]);
+        
+        session()->flash('message', 'Commande assignée avec succès !');
     }
 
-   public function render()
-{
-    return view('livewire.delivery.index', [
-        'drivers' => User::where('role', 'driver')->get(),
-        
-        // Détails complets pour "Orders awaiting assignment"
-        'pendingOrders' => Order::where('status', 'pending')
-                            ->whereDoesntHave('delivery')
-                            ->with('user') // Pour le nom du client
-                            ->latest()
-                            ->get(),
+    public function render()
+    {
+        // Tous les livreurs pour l'état de la flotte
+        $allDrivers = User::where('role', 'driver')->get();
 
-        // Pour le "Suivi des livraisons en cours"
-        'ongoingDeliveries' => Delivery::whereIn('status', ['assigned', 'on_delivery'])
+        // Uniquement les livreurs DISPONIBLES pour le menu déroulant d'attribution
+        $availableDrivers = User::where('role', 'driver')
+                                ->where('is_available', true)
+                                ->get();
+
+        return view('livewire.delivery.index', [
+            'drivers' => $allDrivers,
+            'availableDrivers' => $availableDrivers,
+            'pendingOrders' => Order::where('status', 'pending')
+                                ->whereDoesntHave('delivery')
+                                ->with('user')
+                                ->latest()
+                                ->get(),
+            'ongoingDeliveries' => Delivery::whereIn('status', ['assigned', 'on_delivery'])
                                 ->with(['order', 'driver'])
                                 ->get(),
-    ]);
-}
+        ])->layout('components.layouts.app');
+    }
 }

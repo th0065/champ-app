@@ -12,6 +12,7 @@ use App\Http\Controllers\DriverController;
 use App\Livewire\Orders\Index as OrdersIndex;
 use App\Livewire\Products\Index as ProductsIndex;
 use App\Livewire\Delivery\Index as DeliveryIndex;
+use App\Livewire\Admin\UserManagement;
 /*
 |--------------------------------------------------------------------------
 | Routes Publiques
@@ -32,6 +33,8 @@ Route::prefix('cart')->name('cart.')->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth', 'verified'])->group(function () {
+     // Ajoutez cette ligne pour corriger l'erreur :
+   Route::get('/admin/users', UserManagement::class)->name('users.index');
     
     // DASHBOARD UNIQUE : Aiguillage automatique selon le rôle
 Route::get('/dashboard', function () {
@@ -45,6 +48,8 @@ Route::get('/dashboard', function () {
     };
 })->name('dashboard');
     
+// routes/web.php
+
 
     // Tunnel d'achat
     Route::get('/checkout', [CartController::class, 'checkout'])->name('cart.checkout');

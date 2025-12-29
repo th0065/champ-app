@@ -22,17 +22,13 @@
             Produits
         </flux:navlist.item>
 
-        <flux:navlist.item icon="archive-box" href="#" wire:navigate>
-            Stocks
-        </flux:navlist.item>
-
         <flux:navlist.item icon="truck" :href="route('delivery.index')" :current="request()->routeIs('delivery.index')" wire:navigate>
             Livraisons
         </flux:navlist.item>
 
-        <flux:navlist.item icon="map" href="#" wire:navigate>
-            Zones
-        </flux:navlist.item>
+        <flux:navlist.item icon="users" :href="route('users.index')" :current="request()->routeIs('users.index')" wire:navigate>
+    Gestion Personnel
+    </flux:navlist.item>
     </flux:navlist>
       @elseif(auth()->user()->role === 'driver')
         {{-- Titre de l'application --}}
