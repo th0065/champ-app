@@ -17,6 +17,7 @@ return new class extends Migration
 
             // --- AJOUTS SPECIFIQUES POUR ARAME (Rôles & Contact) ---
             $table->enum('role', ['admin', 'driver', 'buyer'])->default('buyer');
+            $table->boolean('is_available')->default(false);
             $table->string('phone')->unique()->nullable(); 
 
             // --- COLONNES TWO FACTOR (Sécurité) ---

@@ -4,14 +4,15 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+
 
 class Order extends Model
 {
     use HasFactory;
 
-    /**
-     * Les attributs qui peuvent être remplis massivement.
-     */
     protected $fillable = [
         'user_id',
         'payment_method',
@@ -25,10 +26,29 @@ class Order extends Model
     ];
 
     /**
-     * Relation avec l'utilisateur
+     * Relation avec l'utilisateur (Client)
      */
-    public function user()
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
+
+    /**
+     * RELATION À AJOUTER : Une commande contient plusieurs articles
+     */
+    public function items(): HasMany
+    {
+        // On suppose que votre modèle s'appelle OrderItem
+        return $this->hasMany(OrderItem::class);
+    }
+
+    /**
+     * Relation avec la livraison
+     */
+    public function delivery(): HasOne
+    {
+        return $this->hasOne(Delivery::class);
+    }
+
+    
 }

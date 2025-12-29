@@ -7,13 +7,16 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\OrderController; 
 use App\Http\Controllers\AdminController;
-
+use App\Http\Controllers\BuyerController;
+use App\Http\Controllers\DriverController;
+use App\Livewire\Orders\Index as OrdersIndex;
+use App\Livewire\Products\Index as ProductsIndex;
+use App\Livewire\Delivery\Index as DeliveryIndex;
 /*
 |--------------------------------------------------------------------------
 | Routes Publiques
 |--------------------------------------------------------------------------
 */
-
 Route::get('/', [ProductController::class, 'index'])->name('home');
 
 Route::prefix('cart')->name('cart.')->group(function () {
@@ -25,47 +28,58 @@ Route::prefix('cart')->name('cart.')->group(function () {
 
 /*
 |--------------------------------------------------------------------------
-| Routes Protégées (Auth requis)
+| Routes Protégées (Connexion requise)
 |--------------------------------------------------------------------------
 */
-
 Route::middleware(['auth', 'verified'])->group(function () {
     
-    // Dashboard
-    Route::view('dashboard', 'dashboard')->name('dashboard');
+    // DASHBOARD UNIQUE : Aiguillage automatique selon le rôle
+Route::get('/dashboard', function () {
+    $role = auth()->user()->role;
+
+    return match ($role) {
+        'admin'  => (new AdminController())->index(),
+        'driver' => (new DriverController())->index(),
+        'buyer'  => (new BuyerController())->index(),
+        default  => abort(403, 'Rôle non reconnu.'),
+    };
+})->name('dashboard');
+    
 
     // Tunnel d'achat
     Route::get('/checkout', [CartController::class, 'checkout'])->name('cart.checkout');
     Route::post('/order/store', [OrderController::class, 'store'])->name('order.store');
     Route::get('/order-success/{id}', [OrderController::class, 'success'])->name('order.success');
 
-    // Paramètres (Settings)
+    // Paramètres (Profil, Sécurité, Apparence)
     Route::prefix('settings')->group(function () {
         Route::redirect('/', 'settings/profile');
-
         Volt::route('profile', 'settings.profile')->name('profile.edit');
         Volt::route('password', 'settings.password')->name('user-password.edit');
         Volt::route('appearance', 'settings.appearance')->name('appearance.edit');
-
         Volt::route('two-factor', 'settings.two-factor')
             ->middleware(
                 Features::canManageTwoFactorAuthentication() && Features::optionEnabled(Features::twoFactorAuthentication(), 'confirmPassword')
-                ? ['password.confirm']
-                : []
-            )
-            ->name('two-factor.show');
+                ? ['password.confirm'] : []
+            )->name('two-factor.show');
+    });
+
+    Route::get('/orders', OrdersIndex::class)->middleware(['auth'])->name('orders.index');
+
+    Route::get('/products', ProductsIndex::class)->middleware(['auth'])->name('products.index');
+
+    Route::get('/delivery',DeliveryIndex::class)->middleware(['auth'])->name('delivery.index');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Routes d'Administration (Middleware Admin requis)
+    |--------------------------------------------------------------------------
+    */
+    Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function () {
+        // Route pour changer le statut d'une commande (ex: Marquer comme livré)
+        Route::post('/orders/{id}/status', [AdminController::class, 'updateStatus'])->name('orders.status');
+        
+        // Tu pourras ajouter ici la gestion des produits plus tard
+        // Route::resource('products', AdminProductController::class);
     });
 });
-
-
-// Ce groupe demande d'être connecté (auth) ET d'être admin (admin)
-Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
-    
-    // Page d'accueil de l'admin (avec la carte et les stats)
-    Route::get('/dashboard', [AdminController::class, 'index'])->name('dashboard');
-    
-    // Action pour changer le statut d'une commande (ex: Marquer comme livré)
-    Route::post('/orders/{id}/status', [AdminController::class, 'updateStatus'])->name('orders.status');
-    
-});
-
